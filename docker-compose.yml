@@ -1,0 +1,73 @@
+version: '3.9'
+services:
+  ustreamer:
+    image: mkuf/ustreamer:v6.20
+    hostname: ustreamer
+    container_name: camck__ustreamer
+
+    restart: unless-stopped
+
+    devices:
+      - /dev/video0:/dev/video0
+
+    command: >
+      --host=0.0.0.0
+      --port=8080
+      --device=/dev/video0
+      --format=MJPEG
+      --encoder=HW
+      --resolution=1920x1080
+
+    networks:
+      - default
+
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  nginx:
+    image: nginx:1.27.3
+    hostname: nginx
+    container_name: camck__nginx
+
+    restart: unless-stopped
+
+    volumes:
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+
+      - type: bind
+        source: ./.htpasswd
+        target: /etc/htpasswd
+        read_only: true
+
+    networks:
+      - default
+
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.2
+    hostname: cloudflared
+    container_name: camck__cloudflared
+    restart: unless-stopped
+
+    command: tunnel run --token ${TUNNEL_TOKEN}
+
+    networks:
+      - default
+
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+networks:
+  default:
+    name: camck__default
